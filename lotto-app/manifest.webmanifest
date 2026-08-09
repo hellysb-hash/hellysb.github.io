@@ -1,0 +1,14 @@
+{
+  "name": "LUCKY 645",
+  "short_name": "LUCKY 645",
+  "description": "로또6/45 당첨번호와 내 조합을 확인하는 앱",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfbfd",
+  "theme_color": "#7257ed",
+  "icons": [
+    { "src": "icons/lucky-645.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
