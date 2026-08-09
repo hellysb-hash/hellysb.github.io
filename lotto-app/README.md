@@ -1,30 +1,24 @@
-# LUCKY 645 앱 초안
+# 로또6/45 데이터 수집기
 
-역대 1,236회 데이터를 앱 내부 `lotto-data.js`에 포함한 정적 웹앱입니다. 따라서 `index.html` 파일을 직접 열어도 전체 당첨번호 목록을 볼 수 있습니다.
+동행복권 API를 직접 호출하지 않습니다. 공개 GitHub Pages 데이터의 전체 이력을 CSV로 저장하고, 이후 실행에서는 최신 회차 한 건만 가져옵니다.
 
-권장 실행 방법은 터미널에서 다음을 실행한 뒤 표시된 주소를 브라우저에서 여는 것입니다.
+## 실행
 
 ```bash
-cd /Users/home/Documents/Codex/2026-08-09/new-chat/outputs
-python3 -m http.server 8000
+python3 lotto_history.py --file lotto645_history.csv --bootstrap
+python3 lotto_history.py --file lotto645_history.csv
 ```
 
-http://localhost:8000/lotto-app/ 에 접속합니다.
+- 첫 명령: 전체 이력을 받아 CSV를 만듭니다.
+- 두 번째 명령: 매주 추첨 이후 실행하면 최신 회차만 추가 또는 보정합니다.
+- `--bootstrap`: 전체 데이터를 다시 받아 기존 파일과 병합합니다.
 
-포함 기능:
+생성되는 CSV는 UTF-8 BOM 형식이라 Excel에서 한글 열 이름을 바로 열 수 있습니다.
 
-- 최신 회차 당첨번호 및 1등~5등 표
-- 전체 역대 당첨번호(1회~1,236회) 조회 및 회차 검색
-- 번호 6개 수동 선택, 브라우저 내 저장 및 삭제
+## 검증 규칙
 
-저장한 수동조합은 사용 중인 브라우저의 로컬 저장소에 보관됩니다. 서버나 다른 기기와 동기화되지는 않습니다.
+스크립트는 각 회차에서 번호 6개, 1~45 범위, 중복 여부, 보너스번호, 날짜 및 회차 연속성을 검사합니다. 데이터 제공처도 오류 가능성을 알리고 있으므로, 당첨 확인 또는 외부 공개 전에는 최근 회차를 [동행복권 로또6/45 결과](https://www.dhlottery.co.kr/lt645/result)와 대조하세요.
 
-## 휴대폰 설치(PWA)
+## 소스
 
-`manifest.webmanifest`, `sw.js`, 앱 아이콘을 포함해 홈 화면 설치가 가능한 형태로 구성했습니다. 단, 서비스 워커는 HTTPS 배포 주소에서만 동작합니다. `localhost`는 개발용 예외입니다.
-
-1. `outputs/lotto-app` 폴더를 Netlify, Vercel 또는 GitHub Pages에 HTTPS로 배포합니다.
-2. iPhone에서는 배포 주소를 **Safari**로 열고 공유 버튼 → **홈 화면에 추가**를 선택합니다.
-3. Android에서는 Chrome으로 열고 메뉴 → **앱 설치** 또는 **홈 화면에 추가**를 선택합니다.
-
-설치 후에는 화면과 내장 역대 데이터가 오프라인에서도 열립니다. 최신 당첨결과는 앱을 열어 `업데이트`를 눌렀을 때 인터넷 연결을 통해 받아옵니다.
+[smok95/lotto](https://github.com/smok95/lotto)의 `all.json` 및 `latest.json`을 사용합니다. 해당 저장소는 1회부터 최신 회차까지의 JSON을 제공하지만 공식 데이터 제공처는 아닙니다.
