@@ -1,8 +1,9 @@
-const CACHE_NAME = "lucky-645-v16";
+const CACHE_NAME = "lucky-645-v17";
 const APP_FILES = [
   "./",
   "./index.html",
   "./lotto-data.js",
+  "./winning-stores.js",
   "./edit-combo.js",
   "./draw-range.js",
   "./manifest.webmanifest",
