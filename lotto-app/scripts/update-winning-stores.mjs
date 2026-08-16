@@ -21,7 +21,7 @@ async function main() {
   current.rounds ||= {};
   const latest = await getJson(latestUrl);
   const latestRound = Number(latest.draw_no);
-  const start = all ? 262 : Math.max(262, latestRound - 5);
+  const start = all || Object.keys(current.rounds).length === 0 ? 262 : Math.max(262, latestRound - 5);
   const rounds = Array.from({ length: latestRound - start + 1 }, (_, i) => start + i);
 
   for (const round of rounds) {
