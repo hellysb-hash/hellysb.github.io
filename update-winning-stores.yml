@@ -1,0 +1,33 @@
+name: Update lotto winning stores
+
+on:
+  schedule:
+    - cron: "0 18 * * 6" # Sunday 03:00 Korea time
+  workflow_dispatch:
+    inputs:
+      all_history:
+        description: "처음 실행할 때만 true (262회부터 전체 1등 판매점 수집)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Update winning stores
+        run: node lotto-app/scripts/update-winning-stores.mjs ${{ inputs.all_history && '--all' || '' }}
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lotto-app/winning-stores.js
+          git diff --cached --quiet || git commit -m "chore: update winning store data"
+          git push
