@@ -1,8 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const target = new URL("../winning-stores.js", import.meta.url);
-const latestUrl = "https://smok95.github.io/lotto/results/latest.json";
-const storeUrl = (round) => `https://smok95.github.io/lotto/winning-stores/${round}.json`;
+const latestUrl = "https://raw.githubusercontent.com/smok95/lotto/main/results/latest.json";
+const storeUrl = (round) => `https://raw.githubusercontent.com/smok95/lotto/main/winning-stores/${round}.json`;
 const all = process.argv.includes("--all");
 
 function parseCurrent(source) {
