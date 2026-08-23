@@ -43,9 +43,9 @@ premiumAppStyle.textContent = `
   .hero:after { content:""; position:absolute; width:150px; height:150px; right:-62px; top:-74px; border:1px solid #e9dfc1; border-radius:50%; box-shadow:0 0 0 17px #f7f2e8,0 0 0 18px #eee4cb; opacity:.55; }
   .hero .round { position:relative; z-index:1; display:inline-block; padding:5px 9px; border-radius:8px; background:#f0edff; color:#6256c7; font-weight:900; }
   .hero .date { position:relative; z-index:1; color:#8b8993; margin:8px 0 20px; }
-  .hero .balls { position:relative; z-index:1; gap:8px; }
-  .hero .ball { width:39px; height:39px; border:2px solid rgba(255,255,255,.8); box-shadow:0 4px 8px rgba(25,25,35,.12); font-size:13px; }
-  .hero .plus { color:#777585; }
+  .hero .balls { position:relative; z-index:1; flex-wrap:nowrap; gap:clamp(3px,1.1vw,7px); }
+  .hero .ball { flex:none; width:clamp(27px,8.25vw,39px); height:clamp(27px,8.25vw,39px); border:2px solid rgba(255,255,255,.8); box-shadow:0 4px 8px rgba(25,25,35,.12); font-size:clamp(11px,3vw,13px); }
+  .hero .plus { flex:none; color:#777585; font-size:12px; }
   .prizes { border:1px solid #e7e5ec; border-radius:18px; box-shadow:0 7px 18px rgba(35,31,51,.045); }
   .prize { grid-template-columns:41px 1fr 1fr; padding:14px 13px; border-color:#eeecf1; }
   .prize:first-child { background:linear-gradient(90deg,#fffdf7,#fff); }
