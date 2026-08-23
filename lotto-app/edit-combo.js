@@ -130,3 +130,32 @@ document.getElementById("myBack").addEventListener("click", () => {
   document.querySelectorAll(".nav").forEach((nav) => nav.classList.toggle("active", nav.dataset.view === "mine"));
   window.scrollTo(0, 0);
 });
+
+let swipeStart = null;
+const tabViews = ["home", "history", "manual", "mine", "stores"];
+
+document.addEventListener("touchstart", (event) => {
+  if (event.touches.length !== 1) return;
+  const target = event.target;
+  if (target.closest("button, input, select, textarea, a, .selector, .editable-ticket")) {
+    swipeStart = null;
+    return;
+  }
+  swipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+}, { passive: true });
+
+document.addEventListener("touchend", (event) => {
+  if (!swipeStart || event.changedTouches.length !== 1) return;
+  const end = event.changedTouches[0];
+  const deltaX = end.clientX - swipeStart.x;
+  const deltaY = end.clientY - swipeStart.y;
+  swipeStart = null;
+
+  if (Math.abs(deltaX) < 70 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return;
+  const active = document.querySelector(".view.active");
+  const currentIndex = tabViews.indexOf(active?.id);
+  if (currentIndex < 0) return;
+  const nextIndex = currentIndex + (deltaX < 0 ? 1 : -1);
+  if (nextIndex < 0 || nextIndex >= tabViews.length) return;
+  document.querySelector(`.nav[data-view="${tabViews[nextIndex]}"]`)?.click();
+}, { passive: true });
