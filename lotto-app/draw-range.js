@@ -42,12 +42,16 @@ function toggleDrawTicket() {
   button.setAttribute("aria-expanded", String(!isHidden));
 }
 
-function openDrawDetail(round) {
+function openDrawDetail(round, scrollPosition = null) {
   document.getElementById("drawDetailContent").dataset.round = round.회차;
   document.getElementById("drawDetailContent").innerHTML = `${drawNavigator(round)}<h1>제 ${round.회차}회 당첨결과</h1><p class="subtitle">${round.추첨일} 추첨</p><div class="detail-hero"><div class="label">당첨번호</div><div class="detail-date">보너스 번호를 포함한 추첨 결과입니다.</div>${balls(round)}</div><h2>등수별 당첨 결과</h2><div class="prizes">${[1, 2, 3, 4, 5].map((rank) => `<div class="prize"><span class="rank">${rank}등</span><div><div class="label">${['6개 일치','5개 + 보너스','5개 일치','4개 일치','3개 일치'][rank - 1]}</div><b>${Number(round[`${rank}등당첨자수`]).toLocaleString()}명</b></div><div class="amount"><div class="label">1인당 당첨금</div>${money(round[`${rank}등1인당당첨금`])}</div></div>`).join('')}</div><div class="ticket-heading"><h2>당첨번호 마킹</h2><button type="button" class="ticket-toggle" id="drawTicketToggle" onclick="toggleDrawTicket()" aria-expanded="true">용지 닫기</button></div>${drawTicket(round)}<div class="detail-compare">${historyRangePanel(round)}</div>`;
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === "drawDetail"));
   document.querySelectorAll(".nav").forEach((nav) => nav.classList.toggle("active", nav.dataset.view === "history"));
-  window.scrollTo(0, 0);
+  if (Number.isFinite(scrollPosition)) {
+    requestAnimationFrame(() => window.scrollTo(0, scrollPosition));
+  } else {
+    window.scrollTo(0, 0);
+  }
 }
 
 function scopedManualMatches(numbers, range) {
