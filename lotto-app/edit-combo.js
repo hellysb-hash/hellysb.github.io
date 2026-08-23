@@ -151,12 +151,14 @@ function smoothlySwitchTab(viewId, direction) {
   ], { duration: 130, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
 
   leave.onfinish = () => {
+    leave.cancel();
     tab.click();
     const enter = main.animate([
       { transform: `translateX(${-distance}px)`, opacity: 0.08 },
       { transform: "translateX(0)", opacity: 1 }
     ], { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" });
     enter.onfinish = () => {
+      enter.cancel();
       main.style.transform = "";
       main.style.opacity = "";
       isTabTransitioning = false;
