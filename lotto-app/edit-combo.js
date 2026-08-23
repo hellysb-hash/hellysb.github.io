@@ -2,6 +2,10 @@ function comboTypeLabel(set) {
   return set.type === "ai" ? "AI 자동조합" : "수동조합";
 }
 
+function comboRoundLabel(set) {
+  return set.round ? `제 ${set.round}회 예상` : "";
+}
+
 function myNavigator(index) {
   const previous = index + 1 < saved.length ? index + 1 : null;
   const next = index > 0 ? index - 1 : null;
@@ -17,7 +21,7 @@ function refreshMyAnalysis() {
 function openMyDetail(index) {
   if (!saved[index]) return;
   editing = { index, numbers: [...saved[index].numbers] };
-  document.getElementById("myDetailContent").innerHTML = `${myNavigator(index)}<h1>내 조합 ${saved.length - index}</h1><p class="subtitle"><span class="combo-type ${saved[index].type === 'ai' ? 'ai' : ''}">${comboTypeLabel(saved[index])}</span> · 번호를 눌러 조합을 수정할 수 있습니다.</p><div class="editable-ticket" data-index="${index}"></div><div id="myDetailAnalysis"></div>`;
+  document.getElementById("myDetailContent").innerHTML = `${myNavigator(index)}<h1>내 조합 ${saved.length - index}</h1><p class="subtitle">${comboRoundLabel(saved[index]) ? `${comboRoundLabel(saved[index])} · ` : ""}<span class="combo-type ${saved[index].type === 'ai' ? 'ai' : ''}">${comboTypeLabel(saved[index])}</span> · 번호를 눌러 조합을 수정할 수 있습니다.</p><div class="editable-ticket" data-index="${index}"></div><div id="myDetailAnalysis"></div>`;
   renderEditTicket(index);
   refreshMyAnalysis();
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === "myDetail"));
@@ -34,7 +38,12 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
     if (selected.length !== 6) return;
-    saved.unshift({ numbers: [...selected], created: new Date().toLocaleDateString("ko-KR"), type: selectionMode });
+    saved.unshift({
+      numbers: [...selected],
+      created: new Date().toLocaleDateString("ko-KR"),
+      type: selectionMode,
+      round: draws.length ? Number(draws[draws.length - 1].회차) + 1 : null
+    });
     localStorage.setItem("lucky645-saved", JSON.stringify(saved));
     selected = [];
     selectionMode = "manual";
