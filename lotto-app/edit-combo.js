@@ -112,11 +112,13 @@ premiumAppStyle.textContent = `
   .ai-results { margin-top:23px; }
   .ai-result { width:100%; margin-top:9px; border:1px solid #e5e2eb; border-radius:15px; padding:14px; background:#fff; text-align:left; color:#34333e; box-shadow:0 5px 12px rgba(37,30,56,.035); }
   .ai-result:first-of-type { border-color:#d9d3fa; background:#faf9ff; }
+  .ai-result.selected { border-color:#7568d9; background:#f5f3ff; box-shadow:0 6px 16px rgba(100,83,205,.12); }
   .ai-result-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; font-size:12px; }
   .ai-result-head b { color:#6357c8; font-size:14px; }
   .ai-result small { color:#97949e; }
   .ai-result .balls { gap:6px; }
   .ai-result .ball { width:31px; height:31px; font-size:11px; }
+  .ai-save-selected { width:100%; margin-top:16px; border:0; border-radius:13px; padding:15px; background:#27253a; color:#fff; font-size:14px; font-weight:900; }
 `;
 document.head.appendChild(premiumAppStyle);
 
@@ -153,6 +155,8 @@ function openMyDetail(index, scrollPosition = null) {
 }
 
 let aiRecommendationSettings = { mode: "balanced", range: 100 };
+let aiGeneratedResults = [];
+let aiSelectedResultIndexes = new Set();
 
 function aiWeightedPick(candidates, weights) {
   let cursor = Math.random() * weights.reduce((total, weight) => total + weight, 0);
@@ -227,8 +231,19 @@ function showAiRecommendations() {
 }
 
 function renderAiResults() {
-  const results = [makeAiSet(), makeAiSet(), makeAiSet()];
-  document.getElementById("aiResults").innerHTML = `<p class="ai-section-title">${aiModeLabel()} 결과</p>${results.map((numbers, index) => `<button class="ai-result" type="button" data-ai-result="${numbers.join(",")}"><div class="ai-result-head"><b>추천 ${"ABC"[index]}</b><small>이 번호로 마킹하기 ›</small></div><div class="balls">${numbers.map((number) => `<span class="ball ${cls(number)}">${number}</span>`).join("")}</div></button>`).join("")}`;
+  while (aiGeneratedResults.length < 3) {
+    const candidate = makeAiSet();
+    if (!aiGeneratedResults.some((numbers) => numbers.join(",") === candidate.join(","))) aiGeneratedResults.push(candidate);
+  }
+  aiSelectedResultIndexes = new Set([0, 1, 2]);
+  renderAiResultSelection();
+}
+
+function renderAiResultSelection() {
+  const box = document.getElementById("aiResults");
+  if (!box) return;
+  const count = aiSelectedResultIndexes.size;
+  box.innerHTML = `<p class="ai-section-title">${aiModeLabel()} 결과</p><p class="ai-intro">저장할 조합을 선택하세요. 3개 모두 저장할 수 있어요.</p>${aiGeneratedResults.map((numbers, index) => `<button class="ai-result ${aiSelectedResultIndexes.has(index) ? "selected" : ""}" type="button" data-ai-result-index="${index}"><div class="ai-result-head"><b>추천 ${"ABC"[index]}</b><small>${aiSelectedResultIndexes.has(index) ? "✓ 저장 선택됨" : "선택하기"}</small></div><div class="balls">${numbers.map((number) => `<span class="ball ${cls(number)}">${number}</span>`).join("")}</div></button>`).join("")}<button class="ai-save-selected" type="button" data-ai-save-selected>${count}개 조합 저장하기</button>`;
 }
 
 document.addEventListener("click", (event) => {
@@ -262,17 +277,38 @@ document.addEventListener("click", (event) => {
 
   if (event.target.closest("[data-ai-generate]")) {
     event.preventDefault();
+    aiGeneratedResults = [];
     renderAiResults();
     return;
   }
 
-  const aiResult = event.target.closest("[data-ai-result]");
+  const aiResult = event.target.closest("[data-ai-result-index]");
   if (aiResult) {
-    selected = aiResult.dataset.aiResult.split(",").map(Number).sort((a, b) => a - b);
-    selectionMode = "ai";
+    const index = Number(aiResult.dataset.aiResultIndex);
+    aiSelectedResultIndexes.has(index) ? aiSelectedResultIndexes.delete(index) : aiSelectedResultIndexes.add(index);
+    renderAiResultSelection();
+    return;
+  }
+
+  if (event.target.closest("[data-ai-save-selected]")) {
+    if (!aiSelectedResultIndexes.size) {
+      toast("저장할 조합을 하나 이상 선택해 주세요.");
+      return;
+    }
+    const round = draws.length ? Number(draws[draws.length - 1].회차) + 1 : null;
+    [...aiSelectedResultIndexes].sort((a, b) => b - a).forEach((index) => {
+      saved.unshift({
+        numbers: [...aiGeneratedResults[index]],
+        created: new Date().toLocaleDateString("ko-KR"),
+        type: "ai",
+        round
+      });
+    });
+    localStorage.setItem("lucky645-saved", JSON.stringify(saved));
     document.getElementById("aiRecommendation")?.remove();
-    manual();
-    toast("추천 번호를 용지에 마킹했어요.");
+    mine();
+    document.querySelector('.nav[data-view="mine"]')?.click();
+    toast(`${aiSelectedResultIndexes.size}개 AI 조합을 저장했어요.`);
     return;
   }
 
