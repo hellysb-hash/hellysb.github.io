@@ -18,7 +18,10 @@ myDetailNavigationStyle.textContent = `
     margin: 0;
     backdrop-filter: blur(10px);
   }
-  #myDetailContent { padding-top: 48px; }
+  #drawDetailContent,
+  #myDetailContent { padding-top: 28px; }
+  #drawDetail h1,
+  #myDetail h1 { margin-top: 8px; }
 `;
 document.head.appendChild(myDetailNavigationStyle);
 
