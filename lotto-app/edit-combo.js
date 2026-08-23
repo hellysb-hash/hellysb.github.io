@@ -6,6 +6,22 @@ function comboRoundLabel(set) {
   return set.round ? `제 ${set.round}회 예상` : "";
 }
 
+const myDetailNavigationStyle = document.createElement("style");
+myDetailNavigationStyle.textContent = `
+  #myDetail .round-nav {
+    position: fixed;
+    top: env(safe-area-inset-top);
+    left: 50%;
+    z-index: 40;
+    width: min(100%, 560px);
+    transform: translateX(-50%);
+    margin: 0;
+    backdrop-filter: blur(10px);
+  }
+  #myDetailContent { padding-top: 48px; }
+`;
+document.head.appendChild(myDetailNavigationStyle);
+
 function myNavigator(index) {
   const previous = index + 1 < saved.length ? index + 1 : null;
   const next = index > 0 ? index - 1 : null;
@@ -18,15 +34,24 @@ function refreshMyAnalysis() {
   box.innerHTML = table(matches(editing.numbers), "역대 회차 번호 일치 기록", `이 조합의 6개 번호를 역대 ${draws.length}회 당첨번호와 비교한 결과입니다.`, false);
 }
 
-function openMyDetail(index) {
+function openMyDetail(index, scrollPosition = null) {
   if (!saved[index]) return;
+  const restorePosition = Number.isFinite(scrollPosition) ? Math.max(0, scrollPosition) : null;
   editing = { index, numbers: [...saved[index].numbers] };
   document.getElementById("myDetailContent").innerHTML = `${myNavigator(index)}<h1>내 조합 ${saved.length - index}</h1><p class="subtitle">${comboRoundLabel(saved[index]) ? `${comboRoundLabel(saved[index])} · ` : ""}<span class="combo-type ${saved[index].type === 'ai' ? 'ai' : ''}">${comboTypeLabel(saved[index])}</span> · 번호를 눌러 조합을 수정할 수 있습니다.</p><div class="editable-ticket" data-index="${index}"></div><div id="myDetailAnalysis"></div>`;
   renderEditTicket(index);
   refreshMyAnalysis();
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === "myDetail"));
   document.querySelectorAll(".nav").forEach((nav) => nav.classList.toggle("active", nav.dataset.view === "mine"));
-  window.scrollTo(0, 0);
+  if (restorePosition !== null) {
+    window.scrollTo(0, restorePosition);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, restorePosition);
+      requestAnimationFrame(() => window.scrollTo(0, restorePosition));
+    });
+  } else {
+    window.scrollTo(0, 0);
+  }
 }
 
 document.addEventListener("click", (event) => {
@@ -57,7 +82,7 @@ document.addEventListener("click", (event) => {
   if (jump && jump.dataset.index !== "") {
     event.preventDefault();
     event.stopImmediatePropagation();
-    openMyDetail(Number(jump.dataset.index));
+    openMyDetail(Number(jump.dataset.index), window.scrollY);
     return;
   }
 
