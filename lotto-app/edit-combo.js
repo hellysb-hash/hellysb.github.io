@@ -132,7 +132,34 @@ document.getElementById("myBack").addEventListener("click", () => {
 });
 
 let swipeStart = null;
+let isTabTransitioning = false;
 const tabViews = ["home", "history", "manual", "mine", "stores"];
+
+function smoothlySwitchTab(viewId, direction) {
+  if (isTabTransitioning) return;
+  const tab = document.querySelector(`.nav[data-view="${viewId}"]`);
+  const main = document.querySelector("main");
+  if (!tab || !main) return;
+  isTabTransitioning = true;
+  const distance = direction * 20;
+  const leave = main.animate([
+    { transform: "translateX(0)", opacity: 1 },
+    { transform: `translateX(${distance}px)`, opacity: 0.08 }
+  ], { duration: 130, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+
+  leave.onfinish = () => {
+    tab.click();
+    const enter = main.animate([
+      { transform: `translateX(${-distance}px)`, opacity: 0.08 },
+      { transform: "translateX(0)", opacity: 1 }
+    ], { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" });
+    enter.onfinish = () => {
+      main.style.transform = "";
+      main.style.opacity = "";
+      isTabTransitioning = false;
+    };
+  };
+}
 
 document.addEventListener("touchstart", (event) => {
   if (event.touches.length !== 1) return;
@@ -157,5 +184,5 @@ document.addEventListener("touchend", (event) => {
   if (currentIndex < 0) return;
   const nextIndex = currentIndex + (deltaX < 0 ? 1 : -1);
   if (nextIndex < 0 || nextIndex >= tabViews.length) return;
-  document.querySelector(`.nav[data-view="${tabViews[nextIndex]}"]`)?.click();
+  smoothlySwitchTab(tabViews[nextIndex], deltaX < 0 ? -1 : 1);
 }, { passive: true });
