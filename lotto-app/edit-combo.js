@@ -87,6 +87,36 @@ premiumAppStyle.textContent = `
   .nav.active { color:#6558cf; }
   .nav.active:before { content:""; position:absolute; top:0; left:50%; width:24px; height:3px; transform:translateX(-50%); border-radius:0 0 4px 4px; background:#7568d9; }
   .toast { border-radius:13px; box-shadow:0 8px 20px rgba(30,27,42,.2); }
+  .ai-recommendation { position:fixed; inset:0; z-index:100; overflow-y:auto; padding:calc(18px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); background:#faf9f7; }
+  .ai-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+  .ai-close { border:0; background:transparent; color:#6558cf; padding:6px 0; font-size:14px; font-weight:900; }
+  .ai-top h1 { margin:0; font-size:23px; }
+  .ai-intro { margin:-11px 0 22px; color:#85838e; font-size:13px; line-height:1.55; }
+  .ai-section-title { margin:22px 0 10px; color:#4a4855; font-size:13px; font-weight:900; }
+  .ai-mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .ai-mode { min-height:102px; border:1px solid #e7e4ec; border-radius:15px; padding:13px; background:#fff; text-align:left; color:#4b4a55; }
+  .ai-mode.active { border-color:#7669d8; background:#f4f2ff; box-shadow:0 6px 14px rgba(100,83,205,.1); }
+  .ai-mode b { display:block; margin-bottom:6px; color:#2a2935; font-size:14px; }
+  .ai-mode.active b { color:#6256c7; }
+  .ai-mode span { color:#8b8994; font-size:11px; line-height:1.4; }
+  .ai-range { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .ai-range button { border:1px solid #e4e1e9; border-radius:10px; padding:10px 3px; background:#fff; color:#84828e; font-weight:800; font-size:12px; }
+  .ai-range button.active { border-color:#7669d8; background:#f1effd; color:#6256c7; }
+  .ai-filters { margin-top:17px; border:1px solid #e7e4ec; border-radius:14px; background:#fff; overflow:hidden; }
+  .ai-filters summary { padding:13px; color:#555360; font-size:13px; font-weight:900; cursor:pointer; }
+  .ai-filter-list { display:grid; gap:0; border-top:1px solid #efedf2; }
+  .ai-filter-list label { display:flex; align-items:center; justify-content:space-between; padding:12px 13px; color:#66646e; font-size:12px; border-bottom:1px solid #f0eef3; }
+  .ai-filter-list label:last-child { border-bottom:0; }
+  .ai-filter-list input { accent-color:#6f61d9; width:17px; height:17px; }
+  .ai-generate { width:100%; margin-top:20px; border:0; border-radius:13px; padding:15px; background:#6f61d9; color:#fff; font-size:15px; font-weight:900; box-shadow:0 9px 18px rgba(94,78,193,.2); }
+  .ai-results { margin-top:23px; }
+  .ai-result { width:100%; margin-top:9px; border:1px solid #e5e2eb; border-radius:15px; padding:14px; background:#fff; text-align:left; color:#34333e; box-shadow:0 5px 12px rgba(37,30,56,.035); }
+  .ai-result:first-of-type { border-color:#d9d3fa; background:#faf9ff; }
+  .ai-result-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; font-size:12px; }
+  .ai-result-head b { color:#6357c8; font-size:14px; }
+  .ai-result small { color:#97949e; }
+  .ai-result .balls { gap:6px; }
+  .ai-result .ball { width:31px; height:31px; font-size:11px; }
 `;
 document.head.appendChild(premiumAppStyle);
 
@@ -122,7 +152,130 @@ function openMyDetail(index, scrollPosition = null) {
   }
 }
 
+let aiRecommendationSettings = { mode: "balanced", range: 100 };
+
+function aiWeightedPick(candidates, weights) {
+  let cursor = Math.random() * weights.reduce((total, weight) => total + weight, 0);
+  for (let index = 0; index < candidates.length; index += 1) {
+    cursor -= weights[index];
+    if (cursor <= 0) return candidates[index];
+  }
+  return candidates[candidates.length - 1];
+}
+
+function isBalancedAiSet(numbers, filters) {
+  const oddCount = numbers.filter((number) => number % 2).length;
+  const lowCount = numbers.filter((number) => number <= 22).length;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  const longestRun = sorted.reduce((run, number, index) => index && number === sorted[index - 1] + 1 ? run + 1 : 1, 1);
+  const latestNumbers = draws.at(-1) ? [1,2,3,4,5,6].map((index) => Number(draws.at(-1)[`번호${index}`])) : [];
+  const repeats = numbers.filter((number) => latestNumbers.includes(number)).length;
+  if (filters.oddEven && (oddCount < 2 || oddCount > 4)) return false;
+  if (filters.highLow && (lowCount < 2 || lowCount > 4)) return false;
+  if (filters.consecutive && longestRun > 2) return false;
+  if (filters.previous && repeats > 2) return false;
+  return true;
+}
+
+function makeAiSet() {
+  const source = aiRecommendationSettings.range === "all" ? draws : draws.slice(-aiRecommendationSettings.range);
+  const frequency = Array(46).fill(0);
+  const lastSeen = Array(46).fill(-1);
+  source.forEach((row, index) => [1,2,3,4,5,6].forEach((key) => {
+    const number = Number(row[`번호${key}`]);
+    frequency[number] += 1;
+    lastSeen[number] = index;
+  }));
+  const maxFrequency = Math.max(...frequency, 1);
+  const filters = {
+    oddEven: document.getElementById("aiOddEven")?.checked,
+    highLow: document.getElementById("aiHighLow")?.checked,
+    consecutive: document.getElementById("aiConsecutive")?.checked,
+    previous: document.getElementById("aiPrevious")?.checked
+  };
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    const numbers = [];
+    while (numbers.length < 6) {
+      const candidates = Array.from({ length:45 }, (_, index) => index + 1).filter((number) => !numbers.includes(number));
+      const weights = candidates.map((number) => {
+        const hot = frequency[number] / maxFrequency;
+        const overdue = lastSeen[number] < 0 ? 1 : (source.length - 1 - lastSeen[number]) / Math.max(source.length, 1);
+        if (aiRecommendationSettings.mode === "hot") return .25 + hot * 1.65 + Math.random() * .35;
+        if (aiRecommendationSettings.mode === "cold") return .25 + overdue * 1.65 + Math.random() * .35;
+        if (aiRecommendationSettings.mode === "pattern") return .8 + Math.random() * .5;
+        return .35 + hot * .75 + overdue * .55 + Math.random() * .4;
+      });
+      numbers.push(aiWeightedPick(candidates, weights));
+    }
+    numbers.sort((a, b) => a - b);
+    if (isBalancedAiSet(numbers, filters)) return numbers;
+  }
+  return Array.from({ length:45 }, (_, index) => index + 1).sort(() => Math.random() - .5).slice(0, 6).sort((a, b) => a - b);
+}
+
+function aiModeLabel() {
+  return { balanced:"AI 균형 추천", hot:"자주 나온 번호", cold:"오래 안 나온 번호", pattern:"패턴 균형 추천" }[aiRecommendationSettings.mode];
+}
+
+function showAiRecommendations() {
+  document.getElementById("aiRecommendation")?.remove();
+  const overlay = document.createElement("section");
+  overlay.className = "ai-recommendation";
+  overlay.id = "aiRecommendation";
+  overlay.innerHTML = `<div class="ai-top"><button class="ai-close" type="button" data-ai-close>‹ 수동조합</button><h1>AI 번호 추천</h1><span></span></div><p class="ai-intro">원하는 통계 기준을 고르면 조건에 맞는 번호 3개를 추천해 드려요.</p><p class="ai-section-title">추천 방식</p><div class="ai-mode-grid">${[["balanced","AI 균형 추천","빈도·미출현·구간을 고르게 반영"],["hot","자주 나온 번호","최근 출현 빈도 중심"],["cold","오래 안 나온 번호","최근 미출현 번호 중심"],["pattern","패턴 균형 추천","홀짝·고저·연속번호를 분산"]].map(([mode,title,description]) => `<button class="ai-mode ${aiRecommendationSettings.mode === mode ? "active" : ""}" type="button" data-ai-mode="${mode}"><b>${title}</b><span>${description}</span></button>`).join("")}</div><p class="ai-section-title">분석 범위</p><div class="ai-range">${[[50,"최근 50회"],[100,"최근 100회"],["all","전체 회차"]].map(([range,label]) => `<button type="button" class="${aiRecommendationSettings.range === range ? "active" : ""}" data-ai-range="${range}">${label}</button>`).join("")}</div><details class="ai-filters"><summary>세부 조건 설정</summary><div class="ai-filter-list"><label>홀짝 균형 <input id="aiOddEven" type="checkbox" checked></label><label>고저 구간 분산 <input id="aiHighLow" type="checkbox" checked></label><label>연속번호 1쌍 이하 <input id="aiConsecutive" type="checkbox" checked></label><label>직전 회차 번호 2개 이하 <input id="aiPrevious" type="checkbox" checked></label></div></details><button class="ai-generate" type="button" data-ai-generate>추천 번호 3개 만들기</button><div class="ai-results" id="aiResults"></div>`;
+  document.body.appendChild(overlay);
+}
+
+function renderAiResults() {
+  const results = [makeAiSet(), makeAiSet(), makeAiSet()];
+  document.getElementById("aiResults").innerHTML = `<p class="ai-section-title">${aiModeLabel()} 결과</p>${results.map((numbers, index) => `<button class="ai-result" type="button" data-ai-result="${numbers.join(",")}"><div class="ai-result-head"><b>추천 ${"ABC"[index]}</b><small>이 번호로 마킹하기 ›</small></div><div class="balls">${numbers.map((number) => `<span class="ball ${cls(number)}">${number}</span>`).join("")}</div></button>`).join("")}`;
+}
+
 document.addEventListener("click", (event) => {
+  const autoRecommendation = event.target.closest("#auto");
+  if (autoRecommendation) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showAiRecommendations();
+    return;
+  }
+
+  if (event.target.closest("[data-ai-close]")) {
+    event.preventDefault();
+    document.getElementById("aiRecommendation")?.remove();
+    return;
+  }
+
+  const aiMode = event.target.closest("[data-ai-mode]");
+  if (aiMode) {
+    aiRecommendationSettings.mode = aiMode.dataset.aiMode;
+    showAiRecommendations();
+    return;
+  }
+
+  const aiRange = event.target.closest("[data-ai-range]");
+  if (aiRange) {
+    aiRecommendationSettings.range = aiRange.dataset.aiRange === "all" ? "all" : Number(aiRange.dataset.aiRange);
+    showAiRecommendations();
+    return;
+  }
+
+  if (event.target.closest("[data-ai-generate]")) {
+    event.preventDefault();
+    renderAiResults();
+    return;
+  }
+
+  const aiResult = event.target.closest("[data-ai-result]");
+  if (aiResult) {
+    selected = aiResult.dataset.aiResult.split(",").map(Number).sort((a, b) => a - b);
+    selectionMode = "ai";
+    document.getElementById("aiRecommendation")?.remove();
+    manual();
+    toast("추천 번호를 용지에 마킹했어요.");
+    return;
+  }
+
   const manualPick = event.target.closest(".pick[data-no]");
   if (manualPick) selectionMode = "manual";
 
