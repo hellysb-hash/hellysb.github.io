@@ -1,5 +1,5 @@
 window.WINNING_STORES = {
-  "updatedAt": "2026-08-22",
+  "updatedAt": "2026-08-23",
   "source": "1등: smok95/lotto 공개 데이터. 2등: 별도 검증 데이터 추가 필요",
   "rounds": {
     "262": {
