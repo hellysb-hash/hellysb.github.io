@@ -25,7 +25,13 @@ async function getText(url) {
     }
   });
   if (!response.ok) throw new Error(`${response.status} ${url}`);
-  return response.text();
+  const body = await response.arrayBuffer();
+  const utf8 = new TextDecoder("utf-8").decode(body);
+  // The legacy winning-store page is commonly served in EUC-KR.
+  // Decode it again when the Korean heading could not be read as UTF-8.
+  return /2\s*등|당첨\s*(?:판매점|배출점)/.test(utf8)
+    ? utf8
+    : new TextDecoder("euc-kr").decode(body);
 }
 
 function textOnly(value) {
