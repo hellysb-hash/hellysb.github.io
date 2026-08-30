@@ -83,7 +83,18 @@
 
   try {
     const retailers = await readAll("lotto_retailers", "name,address,latitude,longitude", "source_no.asc");
-    window.NEARBY_RETAILERS = retailers;
+    const normalizeName = (value) => String(value || "").toLowerCase().replace(/[\s·ㆍ()\-]/g, "");
+    const samePlace = (first, second) => {
+      if (normalizeName(first.name) !== normalizeName(second.name)) return false;
+      const latGap = Number(first.latitude) - Number(second.latitude);
+      const lonGap = Number(first.longitude) - Number(second.longitude);
+      return Math.hypot(latGap * 111, lonGap * 88) < 0.15;
+    };
+    const retailersWithoutDuplicates = retailers.reduce((unique, retailer) => {
+      if (!unique.some((saved) => samePlace(saved, retailer))) unique.push(retailer);
+      return unique;
+    }, []);
+    window.NEARBY_RETAILERS = retailersWithoutDuplicates;
     if (typeof showNearby === "function" && nearbyPosition) showNearby();
   } catch (error) {
     console.info("Supabase 전국 판매점 위치 데이터를 아직 불러오지 못했습니다.");
