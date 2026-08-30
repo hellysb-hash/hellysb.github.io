@@ -8,12 +8,12 @@
     Authorization: `Bearer ${config.publishableKey}`
   };
 
-  async function readAll(table, select) {
+  async function readAll(table, select, order = "round.asc") {
     const result = [];
     const pageSize = 1000;
     for (let offset = 0; ; offset += pageSize) {
       const response = await fetch(
-        `${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=round.asc&limit=${pageSize}&offset=${offset}`,
+        `${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}&limit=${pageSize}&offset=${offset}`,
         { headers, cache: "no-store" }
       );
       if (!response.ok) throw new Error(`${table}: ${response.status}`);
@@ -69,5 +69,13 @@
     stores();
   } catch (error) {
     console.info("Supabase 판매점 데이터를 아직 불러오지 못했습니다. 기존 데이터를 사용합니다.");
+  }
+
+  try {
+    const retailers = await readAll("lotto_retailers", "name,address,latitude,longitude", "source_no.asc");
+    window.NEARBY_RETAILERS = retailers;
+    if (typeof showNearby === "function" && nearbyPosition) showNearby();
+  } catch (error) {
+    console.info("Supabase 전국 판매점 위치 데이터를 아직 불러오지 못했습니다.");
   }
 })();
