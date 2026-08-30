@@ -1,4 +1,4 @@
-const CACHE_NAME = "lucky-645-v32";
+const CACHE_NAME = "lucky-645-v36";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const APP_FILES = [
   "./winning-stores.js",
   "./edit-combo.js",
   "./draw-range.js",
+  "./supabase-config.js",
+  "./supabase-sync.js",
   "./manifest.webmanifest",
   "./icons/lucky-645.svg"
 ];
