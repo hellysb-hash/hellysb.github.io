@@ -9,18 +9,28 @@
   };
 
   async function readAll(table, select, order = "round.asc") {
-    const result = [];
     const pageSize = 1000;
-    for (let offset = 0; ; offset += pageSize) {
+    const getPage = async (offset, count = false) => {
       const response = await fetch(
         `${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}&limit=${pageSize}&offset=${offset}`,
-        { headers, cache: "no-store" }
+        { headers: count ? { ...headers, Prefer: "count=exact" } : headers, cache: "no-store" }
       );
       if (!response.ok) throw new Error(`${table}: ${response.status}`);
-      const rows = await response.json();
-      result.push(...rows);
-      if (rows.length < pageSize) return result;
+      return { rows: await response.json(), total: response.headers.get("content-range") };
+    };
+    const first = await getPage(0, true);
+    const match = first.total?.match(/\/(\d+)$/);
+    const total = match ? Number(match[1]) : first.rows.length;
+    if (total <= pageSize) return first.rows;
+
+    const pages = [];
+    for (let offset = pageSize; offset < total; offset += pageSize) pages.push(offset);
+    const remaining = [];
+    for (let index = 0; index < pages.length; index += 6) {
+      const batch = await Promise.all(pages.slice(index, index + 6).map(async (offset) => (await getPage(offset)).rows));
+      remaining.push(...batch.flat());
     }
+    return [...first.rows, ...remaining];
   }
 
   function drawFromRow(row) {
