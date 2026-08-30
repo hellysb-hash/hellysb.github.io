@@ -55,7 +55,13 @@
     const merged = new Map(draws.map((draw) => [String(draw.회차), draw]));
     rows.forEach((row) => merged.set(String(row.round), drawFromRow(row)));
     draws = [...merged.values()].sort((a, b) => Number(a.회차) - Number(b.회차));
-    home(); history(); manual(); mine(); stores();
+    /* 보이지 않는 화면까지 한꺼번에 다시 만들면 휴대폰 터치가 끊길 수 있습니다. */
+    const activeView = document.querySelector('.view.active')?.id;
+    if (activeView === "history") history();
+    else if (activeView === "manual") manual();
+    else if (activeView === "mine") mine();
+    else if (activeView === "stores") stores();
+    else home();
   }
 
   function applyWinningStores(rows) {
@@ -116,11 +122,13 @@
     return retailersLoading;
   };
 
-  /* 앱 시작에는 최신 회차만 가져옵니다. */
-  try {
-    const latest = await getRows("lotto_draws", "round,draw_date,numbers,bonus,total_sales,divisions", "round.desc", 0, 12);
-    applyDraws(latest.rows);
-  } catch (_) { console.info("Supabase 최신 당첨번호를 아직 불러오지 못했습니다."); }
+  /* 첫 화면을 먼저 조작할 수 있게 한 뒤 최신 회차를 가볍게 반영합니다. */
+  setTimeout(async () => {
+    try {
+      const latest = await getRows("lotto_draws", "round,draw_date,numbers,bonus,total_sales,divisions", "round.desc", 0, 12);
+      applyDraws(latest.rows);
+    } catch (_) { console.info("Supabase 최신 당첨번호를 아직 불러오지 못했습니다."); }
+  }, 1200);
 
   /* 무거운 데이터는 사용자가 해당 화면을 열었을 때 시작합니다. */
   document.addEventListener("click", (event) => {
