@@ -135,4 +135,29 @@
     if (event.target.closest('.nav[data-view="stores"]')) window.loadWinningStores();
     if (event.target.closest("#nearbyOpen, #nearbyLocate, #nearbyRefresh")) window.loadNearbyRetailers();
   }, true);
+
+  /* 역대 회차 카드 1천여 개는 홈에서 DOM에 남겨 두지 않습니다. */
+  setTimeout(() => {
+    const list = document.getElementById("historyList");
+    if (!list || list.dataset.lightened) return;
+    let savedMarkup = list.innerHTML;
+    const lighten = () => {
+      if (!list.innerHTML) return;
+      savedMarkup = list.innerHTML;
+      list.textContent = "";
+    };
+    list.dataset.lightened = "true";
+    lighten();
+    document.addEventListener("click", (event) => {
+      const nav = event.target.closest(".nav");
+      if (!nav) return;
+      requestAnimationFrame(() => {
+        if (nav.dataset.view === "history") {
+          if (!list.innerHTML) list.innerHTML = savedMarkup;
+        } else {
+          lighten();
+        }
+      });
+    }, true);
+  }, 0);
 })();
