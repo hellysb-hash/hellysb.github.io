@@ -84,8 +84,14 @@
   try {
     const retailers = await readAll("lotto_retailers", "name,address,latitude,longitude", "source_no.asc");
     const normalizeName = (value) => String(value || "").toLowerCase().replace(/[\s·ㆍ()\-]/g, "");
+    const baseAddress = (value) => {
+      const parts = String(value || "").replace(/\([^)]*\)/g, " ").trim().split(/\s+/);
+      const building = parts.findIndex((part) => /^\d+(?:-\d+)?$/.test(part));
+      return parts.slice(0, building >= 0 ? building + 1 : Math.min(parts.length, 5)).join("").toLowerCase();
+    };
     const samePlace = (first, second) => {
       if (normalizeName(first.name) !== normalizeName(second.name)) return false;
+      if (baseAddress(first.address) === baseAddress(second.address)) return true;
       const latGap = Number(first.latitude) - Number(second.latitude);
       const lonGap = Number(first.longitude) - Number(second.longitude);
       return Math.hypot(latGap * 111, lonGap * 88) < 0.15;

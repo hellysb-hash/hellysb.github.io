@@ -1,4 +1,4 @@
-const CACHE_NAME = "lucky-645-v42";
+const CACHE_NAME = "lucky-645-v43";
 const APP_FILES = [
   "./",
   "./index.html",
