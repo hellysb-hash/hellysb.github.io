@@ -5,7 +5,9 @@ on:
     paths:
       - ".github/workflows/update-winning-stores.yml"
   schedule:
-    - cron: "0 18 * * 6"
+    - cron: "0 18 * * 6" # Sunday 03:00 Korea time
+    - cron: "0 23 * * 6" # Sunday 08:00 Korea time
+    - cron: "0 5 * * 0"  # Sunday 14:00 Korea time
   workflow_dispatch:
 
 permissions:
@@ -14,6 +16,9 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
