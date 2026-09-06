@@ -5,6 +5,8 @@ const latestUrl = "https://raw.githubusercontent.com/smok95/lotto/main/results/l
 const storeUrl = (round) => `https://raw.githubusercontent.com/smok95/lotto/main/winning-stores/${round}.json`;
 const officialStoreUrl = (round) => `https://www.dhlottery.co.kr/store.do?method=topStore&drwNo=${round}&pageGubun=L645`;
 const all = process.argv.includes("--all");
+const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function parseCurrent(source) {
   const json = source.replace(/^window\.WINNING_STORES\s*=\s*/, "").replace(/;\s*$/, "");
@@ -70,6 +72,56 @@ function extractSecondPrizeStores(html) {
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) throw new Error(`Supabase ${response.status}: ${await response.text()}`);
+  return response;
+}
+
+async function syncLatestToSupabase(latest, firstStores) {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("GitHub Secrets에 SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다.");
+  }
+
+  const round = Number(latest.draw_no);
+  const draw = {
+    round,
+    draw_date: String(latest.date).slice(0, 10),
+    numbers: latest.numbers.map(Number),
+    bonus: Number(latest.bonus_no),
+    total_sales: latest.total_sales_amount ? Number(latest.total_sales_amount) : null,
+    divisions: latest.divisions || []
+  };
+
+  await supabaseRequest("lotto_draws?on_conflict=round", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify(draw)
+  });
+
+  // 최신 1등 판매점은 매주 전체 교체해 중복 누적을 막습니다.
+  await supabaseRequest(`winning_stores?round=eq.${round}&rank=eq.1`, { method: "DELETE" });
+  if (firstStores.length) {
+    const rows = firstStores.map((store) => ({
+      round,
+      rank: 1,
+      name: store.name,
+      address: store.address || null,
+      combination: store.combination || null
+    }));
+    await supabaseRequest("winning_stores", { method: "POST", body: JSON.stringify(rows) });
+  }
+  console.log(`Synced ${round} to Supabase: 1 draw, ${firstStores.length} first-prize stores`);
+}
+
 async function main() {
   const current = parseCurrent(await readFile(target, "utf8"));
   current.rounds ||= {};
@@ -78,12 +130,14 @@ async function main() {
   const start = all || Object.keys(current.rounds).length === 0 ? 262 : Math.max(262, latestRound - 5);
   const rounds = Array.from({ length: latestRound - start + 1 }, (_, i) => start + i);
   const secondPrizeRounds = new Set(rounds.slice(-6));
+  let latestFirstStores = null;
 
   for (const round of rounds) {
     try {
       const first = await getJson(storeUrl(round));
       const saved = current.rounds[String(round)] ||= { first: [], second: [] };
       saved.first = Array.isArray(first) ? first.map(({ name, address, combination, lat, lng }) => ({ name, address, combination, lat, lng })) : [];
+      if (round === latestRound) latestFirstStores = saved.first;
       console.log(`Updated ${round}: ${saved.first.length} first-prize stores`);
     } catch (error) {
       console.warn(`Kept existing ${round}: ${error.message}`);
@@ -112,6 +166,11 @@ async function main() {
   current.source = "1등: smok95/lotto 공개 데이터. 2등: 동행복권 회차별 당첨판매점 공개 페이지를 주 1회 수집";
   const output = `window.WINNING_STORES = ${JSON.stringify(current, null, 2)};\n`;
   await writeFile(target, output, "utf8");
+
+  if (latestFirstStores === null) {
+    throw new Error(`${latestRound}회 1등 판매점 데이터를 받지 못해 Supabase 업데이트를 중단했습니다.`);
+  }
+  await syncLatestToSupabase(latest, latestFirstStores);
 }
 
 main().catch((error) => {
