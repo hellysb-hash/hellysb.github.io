@@ -1,5 +1,5 @@
 window.WINNING_STORES = {
-  "updatedAt": "2026-09-12",
+  "updatedAt": "2026-09-13",
   "source": "1등: smok95/lotto 공개 데이터. 2등: 동행복권 회차별 당첨판매점 공개 페이지를 주 1회 수집",
   "rounds": {
     "262": {
