@@ -57,7 +57,10 @@
     draws = [...merged.values()].sort((a, b) => Number(a.회차) - Number(b.회차));
     /* 보이지 않는 화면까지 한꺼번에 다시 만들면 휴대폰 터치가 끊길 수 있습니다. */
     const activeView = document.querySelector('.view.active')?.id;
-    if (activeView === "history") history();
+    if (activeView === "history") {
+      // index.html 안의 목록 렌더러가 최신 draws로 다시 만들게 합니다.
+      document.getElementById("search")?.dispatchEvent(new Event("input"));
+    }
     else if (activeView === "manual") manual();
     else if (activeView === "mine") mine();
     else if (activeView === "stores") stores();
@@ -122,10 +125,14 @@
     return retailersLoading;
   };
 
+  // 최근에 받은 회차는 네트워크를 기다리지 않고 즉시 반영합니다.
+  applyDraws(cacheRead("latest-draws-v1", 30 * 24 * 60 * 60 * 1000));
+
   /* 첫 화면을 먼저 조작할 수 있게 한 뒤 최신 회차를 가볍게 반영합니다. */
   setTimeout(async () => {
     try {
       const latest = await getRows("lotto_draws", "round,draw_date,numbers,bonus,total_sales,divisions", "round.desc", 0, 12);
+      cacheWrite("latest-draws-v1", latest.rows);
       applyDraws(latest.rows);
     } catch (_) { console.info("Supabase 최신 당첨번호를 아직 불러오지 못했습니다."); }
   }, 1200);
@@ -140,10 +147,8 @@
   setTimeout(() => {
     const list = document.getElementById("historyList");
     if (!list || list.dataset.lightened) return;
-    let savedMarkup = list.innerHTML;
     const lighten = () => {
       if (!list.innerHTML) return;
-      savedMarkup = list.innerHTML;
       list.textContent = "";
     };
     list.dataset.lightened = "true";
@@ -153,7 +158,8 @@
       if (!nav) return;
       requestAnimationFrame(() => {
         if (nav.dataset.view === "history") {
-          if (!list.innerHTML) list.innerHTML = savedMarkup;
+          // 시작 당시의 목록이 아니라 최신 draws로 회차 목록을 다시 만듭니다.
+          document.getElementById("search")?.dispatchEvent(new Event("input"));
         } else {
           lighten();
         }
