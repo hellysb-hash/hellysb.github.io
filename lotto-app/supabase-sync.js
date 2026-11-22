@@ -15,9 +15,9 @@
     try { localStorage.setItem(cachePrefix + name, JSON.stringify({ savedAt: Date.now(), value })); } catch (_) {}
   };
 
-  async function getRows(table, select, order, offset = 0, limit = 1000, count = false) {
+  async function getRows(table, select, order, offset = 0, limit = 1000, count = false, filters = "") {
     const response = await fetch(
-      `${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}&limit=${limit}&offset=${offset}`,
+      `${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}&limit=${limit}&offset=${offset}${filters}`,
       { headers: count ? { ...headers, Prefer: "count=exact" } : headers, cache: "no-store" }
     );
     if (!response.ok) throw new Error(`${table}: ${response.status}`);
@@ -125,15 +125,23 @@
     return retailersLoading;
   };
 
-  // 최근에 받은 회차는 네트워크를 기다리지 않고 즉시 반영합니다.
-  applyDraws(cacheRead("latest-draws-v1", 30 * 24 * 60 * 60 * 1000));
+  // 1238회 이후 회차는 네트워크를 기다리지 않고 즉시 반영합니다.
+  applyDraws(cacheRead("post-1237-draws-v2", 30 * 24 * 60 * 60 * 1000));
 
-  /* 첫 화면을 먼저 조작할 수 있게 한 뒤 최신 회차를 가볍게 반영합니다. */
+  /* 기본 파일이 1237회까지이므로, 이후 모든 회차를 받아 중간 공백을 막습니다. */
   setTimeout(async () => {
     try {
-      const latest = await getRows("lotto_draws", "round,draw_date,numbers,bonus,total_sales,divisions", "round.desc", 0, 12);
-      cacheWrite("latest-draws-v1", latest.rows);
-      applyDraws(latest.rows);
+      const newerDraws = await getRows(
+        "lotto_draws",
+        "round,draw_date,numbers,bonus,total_sales,divisions",
+        "round.asc",
+        0,
+        1000,
+        false,
+        "&round=gt.1237"
+      );
+      cacheWrite("post-1237-draws-v2", newerDraws.rows);
+      applyDraws(newerDraws.rows);
     } catch (_) { console.info("Supabase 최신 당첨번호를 아직 불러오지 못했습니다."); }
   }, 1200);
 
